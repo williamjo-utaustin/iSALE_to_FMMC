@@ -1,4 +1,4 @@
-function particles = make_particles_from_data(D, col_radial, col_vertical, col_mass, rngSeed, slice_width, slice_offset)
+function particles = make_particles_from_data(D, rngSeed, slice_width, slice_offset)
 % MAKE_PARTICLES_FROM_DATA
 %   particles = make_particles_from_data(D, col_radial, col_vertical, rngSeed, slice_width, slice_offset)
 %   D            : filtered_data (N x K)
@@ -13,11 +13,9 @@ function particles = make_particles_from_data(D, col_radial, col_vertical, col_m
 %   particles.vel : (N x 3), [vx vy vz]
 %   particles.phi : (N x 1), azimuths within [slice_offset, slice_offset + slice_width)
 
+
     arguments
         D double
-        col_radial (1,1) {mustBePositive, mustBeInteger}
-        col_vertical (1,1) {mustBePositive, mustBeInteger}
-        col_mass (1,1) {mustBePositive, mustBeInteger}
         rngSeed (1,1) {mustBeInteger} = []
         slice_width (1,1) double {mustBePositive} = 2*pi
         slice_offset (1,1) double = 0
@@ -25,6 +23,10 @@ function particles = make_particles_from_data(D, col_radial, col_vertical, col_m
     end
 
     if ~isempty(rngSeed), rng(rngSeed); end
+
+    col_radial   = 3;   % e.g., column with radial (horizontal) speed
+    col_vertical = 4;   % e.g., column with vertical speed
+    col_mass = 6;       % e.g., column with mass
 
     N  = size(D,1);
     vr = D(:, col_radial);   % horizontal speed (can be signed)
@@ -43,7 +45,6 @@ function particles = make_particles_from_data(D, col_radial, col_vertical, col_m
 
     pos = zeros(N,3);
     vel = [vx, vy, vz];
-
 
     mass = D(:,col_mass);
 

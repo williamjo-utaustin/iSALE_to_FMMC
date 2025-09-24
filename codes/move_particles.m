@@ -1,9 +1,25 @@
-function [particles, traj, landed_mask, veloc, meta] = move_particles(particles, dt, steps, g, recordTraj, sampleTimesSec)
-% MOVE_PARTICLES  3D ballistic motion with sticky ground at y = 0.
+function [particles, traj, landed_mask, veloc, meta] = move_particles(particles, dt, steps, g, recordTraj, sampleTimesSec, varargin)
 % Semi-implicit Euler: v <- v + a*dt; x <- x + v*dt
 % Ground plane at y=0: clamp y, zero velocity, stick thereafter.
 %
 % NEW: If you provide sampleTimesSec (seconds), only those frames are recorded.
+
+    % --- optional progress controls (all default off) ---
+    p = inputParser;
+    addParameter(p, 'progress', false);                 % true -> print text progress
+    addParameter(p, 'progressEvery', max(1,ceil(steps/50))); % print every N steps
+    addParameter(p, 'label', '');                       % prefix label for prints
+    addParameter(p, 'useWaitbar', false);               % also show MATLAB waitbar
+    parse(p, varargin{:});
+    showProgress  = p.Results.progress;
+    progressEvery = p.Results.progressEvery;
+    label         = p.Results.label;
+    useWaitbar    = p.Results.useWaitbar;
+
+    if useWaitbar
+        hwb = waitbar(0, sprintf('[%s] integrating...', label));
+    end
+
 
     if nargin < 2 || isempty(dt),         dt = 0.01;   end
     if nargin < 3 || isempty(steps),      steps = 100; end
@@ -124,7 +140,21 @@ function [particles, traj, landed_mask, veloc, meta] = move_particles(particles,
         if ~any(active) && (~recordTraj || write_ptr > numel(sample_idx))
             break
         end
+
+        % --- progress output ---
+        if showProgress && (s == 1 || s == steps || mod(s, progressEvery) == 0)
+            fprintf('\r[%s] step %6d / %6d   t = %8.2f s', label, s, steps, s*dt);
+            drawnow limitrate;
+        end
+        if useWaitbar && (mod(s, progressEvery) == 0 || s == steps)
+            waitbar(s/steps, hwb, sprintf('[%s] %d/%d   t=%.1f s', label, s, steps, s*dt));
+        end
+
     end
+
+    % tidy up progress UI
+    if showProgress, fprintf('\n'); end
+    if useWaitbar,   close(hwb);   end
 
     % If we exited early but more samples were requested, pad with last state
     if recordTraj && write_ptr <= numel(sample_idx)
